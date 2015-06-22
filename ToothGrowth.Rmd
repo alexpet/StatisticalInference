@@ -1,0 +1,187 @@
+---
+title: "Tooth Growth"
+author: "Alex Petkovski"
+date: "Sunday, May 24, 2015"
+output:
+  pdf_document:
+    latex_engine: xelatex
+---
+
+# Overview
+The following report investigates **R** dataset **Tooth Growth**. Some preliminary 
+exploratory data analysis is conducted along with a summary of the key statistics. 
+Finally, we construct some hypothesis tests to compare tooth growth by supplement 
+factor and dose in order to state some conclusions and assumptions needed for those 
+conclusions.
+
+# Data Exploration
+Load the data, get the structure and summarize
+```{r, cache=TRUE}
+data(ToothGrowth)
+```
+```{r, echo=FALSE, cache=TRUE}
+str(ToothGrowth)
+summary(ToothGrowth)
+```
+   
+From the structure and review of `?ToothGrowth` help file, we have the following
+structure and description:   
+
+Variable | Data Type | Description
+-------- | --------- | --------------------------
+len      | numeric   | Tooth length
+supp     | factor    | Supplement type (VC or OJ)
+dose     | numeric   | Dose in milligrams
+
+Let's make **dose** a factor since we will be analyzing tooth length by dose 
+factor
+```{r, cache=TRUE}
+ToothGrowth$dose <- as.factor(ToothGrowth$dose)
+```
+
+Finally, let's review the data in a Supplement type panel box plot   
+```{r, echo=FALSE, cache=TRUE}
+library(ggplot2)
+ggplot(ToothGrowth, aes(x=dose, y=len, fill=dose)) + 
+    geom_boxplot() + 
+    facet_grid(. ~ supp) +
+    guides(fill=FALSE)
+```
+
+# Summary
+Assuming a normal distribution, we'll construct a table that calculates the various 
+statistics such as $X_bar$, $S$ and $n$.  
+```{r, echo=FALSE, cache=TRUE}
+attach(ToothGrowth)
+dsum <- aggregate(len,list(dose,supp),FUN=function(x) c(X_bar = mean(x)
+                                                       , S = sd(x)
+                                                       , n = length(x)))
+names(dsum) <- c("dose","supp","x")
+dsum
+detach(ToothGrowth)
+```
+
+# Confidence Intervals and Hypothesis Tests
+
+## Supplement Type Investigation
+Does supplement type (VC or OJ) have any impact on tooth length?
+- H0: different supplement types have no effect on tooth length
+```{r, echo=FALSE, cache=TRUE}
+t.test(len ~ supp, paired = TRUE, data = ToothGrowth)
+```
+
+t is high, confidence does not contain 0 and p-value is less that 5%, thus we 
+reject H0.
+
+## Dose Investigation
+Does dose have any impact on tooth length?
+- H0: different doses have no effect on tooth length
+```{r, echo=FALSE, cache=TRUE}
+d_05 <- ToothGrowth$len[ToothGrowth$dose == 0.5]
+d_10 <- ToothGrowth$len[ToothGrowth$dose == 1]
+d_20 <- ToothGrowth$len[ToothGrowth$dose == 2]
+
+t_05v10 <- t.test(d_05, d_10, paired = TRUE)
+t_05v20 <- t.test(d_05, d_20, paired = TRUE)
+t_10v20 <- t.test(d_10, d_20, paired = TRUE)
+
+t1 <- data.frame(
+    "t.value" = sprintf("%.3f", t_05v10$statistic),  
+    "CI-low" = sprintf("%.3f", t_05v10$conf[1]),
+    "CI-high" = sprintf("%.3f", t_05v10$conf[2]),
+    "p.value" = sprintf("%.3f", t_05v10$p.value)
+)
+t2 <- data.frame(
+    "t.value" = sprintf("%.3f", t_05v20$statistic),  
+    "CI-low" = sprintf("%.3f", t_05v20$conf[1]),
+    "CI-high" = sprintf("%.3f", t_05v20$conf[2]),
+    "p.value" = sprintf("%.3f", t_05v20$p.value)
+)
+t3 <- data.frame(
+    "t.value" = sprintf("%.3f", t_10v20$statistic),  
+    "CI-low" = sprintf("%.3f", t_10v20$conf[1]),
+    "CI-high" = sprintf("%.3f", t_10v20$conf[2]),
+    "p.value" = sprintf("%.3f", t_10v20$p.value)
+)
+
+result <- rbind(t1, t2, t3)
+result
+
+```
+
+t is very low, confidence does not contain 0 and p-value is less that 5%, thus we 
+reject H0 across all tests.
+
+# Conclusions
+Assuming that t-tests are paired which is based on description of Tooth Growth
+data-set, we conclude the following:
+- Reject hypothesis that supplement types have no effect on tooth growth.
+- Reject hypothesis that doses have no effect on tooth growth.
+- Both conclusions also assume that two variances in all t-tests are not equal.
+
+# Appendix
+
+Code used to get structure and summary of data
+```
+str(ToothGrowth)
+summary(ToothGrowth)
+```
+
+Code used to generate box-plot
+```
+library(ggplot2)
+ggplot(ToothGrowth, aes(x=dose, y=len, fill=dose)) + 
+    geom_boxplot() + 
+    facet_grid(. ~ supp) +
+    guides(fill=FALSE)
+```
+
+Code used to generate summary table
+```
+attach(ToothGrowth)
+dsum <- aggregate(len,list(dose,supp),FUN=function(x) c(X_bar = mean(x)
+                                                       , S = sd(x)
+                                                       , n = length(x)))
+names(dsum) <- c("dose","supp","x")
+dsum
+detach(ToothGrowth)
+```
+
+Code for supplement test
+```
+t.test(len ~ supp, paired = TRUE, data = ToothGrowth)
+```
+
+Code for dose test
+```
+d_05 <- ToothGrowth$len[ToothGrowth$dose == 0.5]
+d_10 <- ToothGrowth$len[ToothGrowth$dose == 1]
+d_20 <- ToothGrowth$len[ToothGrowth$dose == 2]
+
+t_05v10 <- t.test(d_05, d_10, paired = TRUE)
+t_05v20 <- t.test(d_05, d_20, paired = TRUE)
+t_10v20 <- t.test(d_10, d_20, paired = TRUE)
+
+t1 <- data.frame(
+    "t.value" = sprintf("%.3f", t_05v10$statistic),  
+    "CI-low" = sprintf("%.3f", t_05v10$conf[1]),
+    "CI-high" = sprintf("%.3f", t_05v10$conf[2]),
+    "p.value" = sprintf("%.3f", t_05v10$p.value)
+)
+t2 <- data.frame(
+    "t.value" = sprintf("%.3f", t_05v20$statistic),  
+    "CI-low" = sprintf("%.3f", t_05v20$conf[1]),
+    "CI-high" = sprintf("%.3f", t_05v20$conf[2]),
+    "p.value" = sprintf("%.3f", t_05v20$p.value)
+)
+t3 <- data.frame(
+    "t.value" = sprintf("%.3f", t_10v20$statistic),  
+    "CI-low" = sprintf("%.3f", t_10v20$conf[1]),
+    "CI-high" = sprintf("%.3f", t_10v20$conf[2]),
+    "p.value" = sprintf("%.3f", t_10v20$p.value)
+)
+
+result <- rbind(t1, t2, t3)
+result
+
+```
